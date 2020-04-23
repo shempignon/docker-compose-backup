@@ -19,6 +19,7 @@ struct BackupConfig {
   service: String,
   docker_compose: String,
   path: String,
+  backup_command: Option<String>,
 }
 
 #[cfg(unix)]
@@ -68,7 +69,10 @@ async fn backup_docker_compose_service(docker: &Docker, backup_directory: &str, 
     name: container_name.as_str(),
   });
 
-  let backup_command = format!("cd {} && tar cf /backup/{}_{}.tar .", &backup_config.path, &backup_config.service, &utc.to_rfc3339());
+  let backup_command = match backup_config.backup_command {
+    Some(command) => format!("cd {} && {}", &backup_config.path, &command),
+    None => format!("cd {} && tar cf /backup/{}_{}.tar .", &backup_config.path, &backup_config.service, &utc.to_rfc3339()),
+  };
 
   let mut host_config = HostConfig::default();
   host_config.binds = Some(vec![binds.as_str()]);
