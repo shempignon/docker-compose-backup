@@ -1,8 +1,11 @@
+#[macro_use]
+extern crate clap;
+
 use bollard::Docker;
 use bollard::container::{CreateContainerOptions, Config as DockerRunConfig, HostConfig, StartContainerOptions};
 use chrono::prelude::*;
+use clap::App;
 use serde_derive::Deserialize;
-use std::env;
 use std::fs::File;
 use std::io::prelude::*;
 use std::process::Command;
@@ -25,13 +28,13 @@ struct BackupConfig {
 #[cfg(unix)]
 #[tokio::main]
 async fn main() -> Result<(), String> {
-  let args: Vec<String> = env::args().collect();
-  
-  if args.len() < 2 {
-    panic!("You need to provide the config.toml file as first parameter");
-  }
+  let yaml = load_yaml!("cli.yml");
 
-  let config = get_config(&args[1])?;
+  let matches = App::from_yaml(yaml).get_matches();
+
+  let config_file = matches.value_of("config").unwrap();
+
+  let config = get_config(&config_file)?;
 
   let docker = Docker::connect_with_unix_defaults().map_err(stringify)?;
 

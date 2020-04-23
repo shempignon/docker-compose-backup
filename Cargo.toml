@@ -1,6 +1,6 @@
 [package]
 name = "docker-compose-backup"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Shempignon <nicolas@pointndots.com>"]
 edition = "2018"
 
@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 bollard = "0.4"
 chrono = "0.4"
+clap = { version = "2.33", features = ["yaml"] }
 tokio = { version = "0.2", features = ["full"] }
 toml = "0.5.*"
 serde = "1.0.*"
