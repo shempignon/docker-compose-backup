@@ -1,3 +1,4 @@
+use bollard::Docker;
 use serde_derive::Deserialize;
 use std::env;
 use std::fs::File;
@@ -16,7 +17,9 @@ struct BackupConfig {
   path: String,
 }
 
-fn main() {
+#[cfg(unix)]
+#[tokio::main]
+async fn main() {
   let args: Vec<String> = env::args().collect();
   
   if args.len() < 2 {
@@ -25,7 +28,9 @@ fn main() {
 
   let config = get_config(&args[1]).unwrap();
 
-  println!("{:?}", config);
+  let docker = Docker::connect_with_unix_defaults().unwrap();
+
+  println!("{:?}", docker.version().await.unwrap());
 }
 
 fn stringify<T>(err: T) -> String where T: ToString {
