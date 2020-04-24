@@ -1,15 +1,16 @@
 [package]
 name = "docker-compose-backup"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Shempignon <nicolas@pointndots.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bollard = "0.4"
+bollard = "0.5"
 chrono = "0.4"
 clap = { version = "2.33", features = ["yaml"] }
+futures = "0.3.4"
 tokio = { version = "0.2", features = ["full"] }
 toml = "0.5.*"
 serde = "1.0.*"
