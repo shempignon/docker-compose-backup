@@ -1,9 +1,0 @@
-name: docker-compose-backup
-version: "0.2.0"
-author: Shempignon <nicolas@pointndots>
-about: Backup your docker-compose defined services
-args:
-    - config:
-        help: Sets the toml config file to use
-        required: true
-        index: 1

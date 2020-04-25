@@ -1,6 +1,6 @@
 use super::config::BackupConfig;
 use super::config::Config;
-use super::stringify::stringify;
+use super::report::report;
 use bollard::container::{
     Config as DockerRunConfig, CreateContainerOptions, HostConfig, StartContainerOptions,
 };
@@ -23,15 +23,17 @@ impl<'a> Backup<'a> {
 }
 
 impl Backup<'_> {
-    pub async fn process(&self) -> Result<(), String> {
+    pub async fn process(&self) -> Result<(), ()> {
         let image = self.extract_image();
         let tag = self.extract_tag();
 
         if self.should_pull(image, tag).await? {
+            info!("Pulling {}", Self::get_reference(image, tag));
             self.pull_image(image, tag).await?;
         }
 
         for backup_config in &self.config.projects {
+            info!("Backing up service {}", backup_config.service);
             self.backup_project(backup_config, image, tag).await?;
         }
 
@@ -70,7 +72,7 @@ impl Backup<'_> {
         format!("{}{}", image, tag)
     }
 
-    async fn should_pull(&self, image: &str, tag: Option<&str>) -> Result<bool, String> {
+    async fn should_pull(&self, image: &str, tag: Option<&str>) -> Result<bool, ()> {
         let term = Self::get_reference(image, tag);
 
         let search_options = SearchImagesOptions {
@@ -82,12 +84,12 @@ impl Backup<'_> {
             .docker
             .search_images(search_options)
             .await
-            .map_err(stringify)?;
+            .map_err(report)?;
 
         Ok(results.is_empty())
     }
 
-    async fn pull_image(&self, from_image: &str, tag_option: Option<&str>) -> Result<(), String> {
+    async fn pull_image(&self, from_image: &str, tag_option: Option<&str>) -> Result<(), ()> {
         let mut options = CreateImageOptions {
             from_image,
             ..Default::default()
@@ -101,7 +103,7 @@ impl Backup<'_> {
 
         let mut stream = self.docker.create_image(Some(options), None, None);
 
-        stream.try_next().await.map_err(stringify)?;
+        stream.try_next().await.map_err(report)?;
 
         Ok(())
     }
@@ -111,10 +113,10 @@ impl Backup<'_> {
         backup_config: &BackupConfig,
         image: &str,
         tag: Option<&str>,
-    ) -> Result<(), String> {
+    ) -> Result<(), ()> {
         let binds = format!("{}:/backup", self.config.backup_directory);
 
-        let container_id = &self.extract_container_id(&backup_config)?;
+        let container_id = &self.extract_container_id(&backup_config).map_err(report)?;
 
         let utc: DateTime<Utc> = Utc::now();
 
@@ -151,12 +153,19 @@ impl Backup<'_> {
         self.docker
             .create_container(options, config)
             .await
-            .map_err(stringify)?;
+            .map_err(report)?;
 
         self.docker
             .start_container(&container_name, None::<StartContainerOptions<String>>)
             .await
-            .map_err(stringify)?;
+            .map_err(report)?;
+
+        debug!("Image reference used {}", reference);
+        debug!("Backup command used {}", backup_command);
+        info!(
+            "Service {} backup complete, available in {}",
+            backup_config.service, self.config.backup_directory
+        );
 
         Ok(())
     }
@@ -168,9 +177,11 @@ impl Backup<'_> {
             .arg("--quiet")
             .arg(&backup_config.service)
             .output()
-            .map_err(stringify)?;
+            .map_err(|err| err.to_string())?;
 
-        let container_ids = str::from_utf8(&output.stdout).map_err(stringify)?.trim();
+        let container_ids = str::from_utf8(&output.stdout)
+            .map_err(|err| err.to_string())?
+            .trim();
 
         let fragments: Vec<&str> = container_ids.split('\n').collect();
 
