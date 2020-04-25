@@ -1,6 +1,6 @@
 [package]
 name = "docker-compose-backup"
-version = "0.3.2"
+version = "0.4.0"
 authors = ["Shempignon <nicolas@pointndots.com>"]
 edition = "2018"
 description = "Backup your docker-compose defined services"

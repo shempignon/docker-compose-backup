@@ -11,6 +11,5 @@ pub struct Config {
 pub struct BackupConfig {
     pub service: String,
     pub docker_compose: String,
-    pub path: String,
     pub backup_command: Option<String>,
 }
