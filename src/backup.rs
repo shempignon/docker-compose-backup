@@ -2,11 +2,13 @@ use super::config::BackupConfig;
 use super::config::Config;
 use super::report::report;
 use bollard::container::{
-    Config as DockerRunConfig, CreateContainerOptions, HostConfig, StartContainerOptions,
+    Config as DockerRunConfig, CreateContainerOptions, HostConfig, InspectContainerOptions,
+    StartContainerOptions,
 };
 use bollard::image::{CreateImageOptions, SearchImagesOptions};
 use bollard::Docker;
 use chrono::prelude::*;
+use std::collections::HashMap;
 use std::default::Default;
 use std::process::Command;
 use std::str;
@@ -118,23 +120,15 @@ impl Backup<'_> {
 
         let container_id = &self.extract_container_id(&backup_config).map_err(report)?;
 
-        let utc: DateTime<Utc> = Utc::now();
-
         let container_name = format!("{}-backup", &backup_config.service);
 
         let options = Some(CreateContainerOptions {
             name: container_name.as_str(),
         });
 
-        let backup_command = match &backup_config.backup_command {
-            Some(command) => format!("cd {} && {}", &backup_config.path, &command),
-            None => format!(
-                "cd {} && tar cf /backup/{}_{}.tar .",
-                &backup_config.path,
-                &backup_config.service,
-                &utc.to_rfc3339()
-            ),
-        };
+        let mounts_destinations = self.retrieve_mount_destinations(&container_id).await?;
+
+        let backup_command = self.build_backup_command(backup_config, mounts_destinations);
 
         let mut host_config = HostConfig::default();
         host_config.binds = Some(vec![binds.as_str()]);
@@ -188,9 +182,55 @@ impl Backup<'_> {
         match fragments.first() {
             None => Err(format!(
                 "Unable to extract a container id for service: {} in {}/docker-compose.yml",
-                &backup_config.service, &backup_config.path
+                &backup_config.service, &backup_config.docker_compose
             )),
             Some(id) => Ok((*id).into()),
         }
+    }
+
+    async fn retrieve_mount_destinations(
+        &self,
+        container_id: &str,
+    ) -> Result<HashMap<String, String>, ()> {
+        let options = Some(InspectContainerOptions { size: false });
+
+        let container = self
+            .docker
+            .inspect_container(container_id, options)
+            .await
+            .map_err(report)?;
+
+        let mut mount_destinations = HashMap::new();
+
+        for (index, mount) in container.mounts.into_iter().enumerate() {
+            let name = mount.name.clone().unwrap_or_else(|| index.to_string());
+
+            mount_destinations.insert(name, mount.destination);
+        }
+
+        Ok(mount_destinations)
+    }
+
+    fn build_backup_command(
+        &self,
+        backup_config: &BackupConfig,
+        mount_destinations: HashMap<String, String>,
+    ) -> String {
+        let mut command = String::from("");
+
+        let utc: DateTime<Utc> = Utc::now();
+
+        for (name, destination) in mount_destinations {
+            let backup_command = backup_config.backup_command.clone().unwrap_or(format!(
+                "tar cf /backup/{}_{}_{}.tar .",
+                backup_config.service,
+                &name,
+                &utc.to_rfc3339()
+            ));
+
+            command = format!("{} && cd {} && {}", command, destination, backup_command);
+        }
+
+        command
     }
 }
