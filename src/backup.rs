@@ -216,21 +216,22 @@ impl Backup<'_> {
         backup_config: &BackupConfig,
         mount_destinations: HashMap<String, String>,
     ) -> String {
-        let mut command = String::from("");
-
         let utc: DateTime<Utc> = Utc::now();
 
-        for (name, destination) in mount_destinations {
-            let backup_command = backup_config.backup_command.clone().unwrap_or(format!(
-                "tar cf /backup/{}_{}_{}.tar .",
-                backup_config.service,
-                &name,
-                &utc.to_rfc3339()
-            ));
+        let commands: Vec<String> = mount_destinations
+            .iter()
+            .map(|(name, destination)| {
+                let backup_command = backup_config.backup_command.clone().unwrap_or(format!(
+                    "tar cf /backup/{}_{}_{}.tar .",
+                    backup_config.service,
+                    &name,
+                    &utc.to_rfc3339()
+                ));
 
-            command = format!("{} && cd {} && {}", command, destination, backup_command);
-        }
+                format!("cd {} && {}", destination, backup_command)
+            })
+            .collect();
 
-        command
+        commands.join(" && ")
     }
 }
