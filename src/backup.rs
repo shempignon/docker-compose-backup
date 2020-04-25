@@ -87,14 +87,14 @@ impl Backup<'_> {
         Ok(results.is_empty())
     }
 
-    async fn pull_image(&self, from_image: &str, tag: Option<&str>) -> Result<(), String> {
+    async fn pull_image(&self, from_image: &str, tag_option: Option<&str>) -> Result<(), String> {
         let mut options = CreateImageOptions {
             from_image,
             ..Default::default()
         };
 
-        if tag.is_some() {
-            options.tag = tag.unwrap();
+        if let Some(tag) = tag_option {
+            options.tag = tag;
         }
 
         use futures::stream::TryStreamExt;
