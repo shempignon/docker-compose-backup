@@ -120,7 +120,7 @@ impl Backup<'_> {
 
         let container_id = &self.extract_container_id(&backup_config).map_err(report)?;
 
-        let container_name = format!("{}-backup", &backup_config.service);
+        let container_name = format!("{}-backup", &container_id);
 
         let options = Some(CreateContainerOptions {
             name: container_name.as_str(),
