@@ -170,14 +170,16 @@ impl Backup<'_> {
             .output()
             .map_err(stringify)?;
 
-        let container_id = str::from_utf8(&output.stdout).map_err(stringify)?.trim();
+        let container_ids = str::from_utf8(&output.stdout).map_err(stringify)?.trim();
 
-        match container_id {
-            "" => Err(format!(
+        let fragments: Vec<&str> = container_ids.split('\n').collect();
+
+        match fragments.first() {
+            None => Err(format!(
                 "Unable to extract a container id for service: {} in {}/docker-compose.yml",
                 &backup_config.service, &backup_config.path
             )),
-            id => Ok(id.into()),
+            Some(id) => Ok((*id).into()),
         }
     }
 }
