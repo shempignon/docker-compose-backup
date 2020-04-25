@@ -1,7 +1,7 @@
 Docker Compose Backup
 ===
 
-![Test](https://github.com/shempignon/docker-compose-backup/workflows/Test/badge.svg)
+![ci](https://github.com/shempignon/docker-compose-backup/workflows/ci/badge.svg)
 
 Backup [docker-compose](https://github.com/docker/compose) services through data containers
 
