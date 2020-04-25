@@ -33,6 +33,10 @@ service = "service"
 docker_compose = "/path/to/project/containing/docker-compose-file"
 path = "/path/to/backup/in/container"
 ```
+- [Ubuntu](https://hub.docker.com/_/ubuntu) is the default image used for the data container, you can change it in the top level configuration:
+```toml
+image = "busybox:1"
+```
 - If you want to use another backup command you can specify it with
 ```toml
 [[projects]]
